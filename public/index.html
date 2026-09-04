@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SpaceRSS</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <script src="/js/diagnostics.js"></script>
+</head>
+<body>
+  <div id="scene-container"></div>
+
+  <div class="hud">
+    <div class="topbar">
+      <div class="brand">
+        <h1>SpaceRSS</h1>
+        <a class="nav-link" href="/saved.html">Saved</a>
+      </div>
+      <div class="filter-bar">
+        <button data-filter="all" class="active">All</button>
+        <button data-filter="cve">CVEs</button>
+        <button data-filter="ransomware">Ransomware</button>
+        <button data-filter="breach">Breaches</button>
+        <button data-filter="malware">Malware</button>
+        <button data-filter="phishing">Phishing</button>
+      </div>
+      <button id="refresh-btn" class="refresh-btn" type="button" title="Check for new articles" aria-label="Check for new articles">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+      </button>
+    </div>
+
+    <div id="status-line" class="status-line">Loading...</div>
+
+    <div class="legend">
+      <div class="legend-row">
+        <span class="legend-title">Threat</span>
+        <span class="legend-swatches">
+          <i class="legend-dot" style="background:#4a4f57"></i>
+          <i class="legend-dot" style="background:#5b7a94"></i>
+          <i class="legend-dot" style="background:#e0c34a"></i>
+          <i class="legend-dot" style="background:#e8934a"></i>
+          <i class="legend-dot" style="background:#e0473f"></i>
+        </span>
+        <span>critical</span>
+      </div>
+      <div class="legend-row">
+        <span class="legend-title">Impact</span>
+        <span class="legend-sizes">
+          <i style="width:5px;height:5px"></i>
+          <i style="width:9px;height:9px"></i>
+          <i style="width:14px;height:14px"></i>
+        </span>
+        <span>reach</span>
+      </div>
+    </div>
+
+    <div id="info-panel" class="info-panel">
+      <button id="info-close" class="close-btn">&times;</button>
+      <div id="info-source" class="source-line"></div>
+      <h2 id="info-title"></h2>
+      <div id="info-categories" class="categories"></div>
+      <p id="info-impact" class="impact-line"></p>
+      <p id="info-summary" class="summary"></p>
+      <div class="actions">
+        <a id="info-link" href="#" target="_blank" rel="noopener noreferrer">Read article</a>
+        <button id="pin-btn">Pin</button>
+        <button id="save-btn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading-msg" class="loading-msg">Establishing uplink...</div>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

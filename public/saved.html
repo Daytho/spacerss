@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SpaceRSS — Saved</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <script src="/js/diagnostics.js"></script>
+</head>
+<body>
+  <div id="scene-container"></div>
+
+  <div class="hud">
+    <div class="topbar">
+      <div class="brand">
+        <h1>SpaceRSS — Saved</h1>
+        <a class="nav-link" href="/index.html">Live feed</a>
+      </div>
+    </div>
+
+    <div id="status-line" class="status-line">Loading...</div>
+
+    <div id="info-panel" class="info-panel">
+      <button id="info-close" class="close-btn">&times;</button>
+      <div id="info-source" class="source-line"></div>
+      <h2 id="info-title"></h2>
+      <div id="info-categories" class="categories"></div>
+      <p id="info-impact" class="impact-line"></p>
+      <p id="info-summary" class="summary"></p>
+      <div class="actions">
+        <a id="info-link" href="#" target="_blank" rel="noopener noreferrer">Read article</a>
+        <button id="pin-btn">Pin</button>
+        <button id="save-btn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading-msg" class="loading-msg">Loading archive...</div>
+
+  <script type="module" src="/js/saved.js"></script>
+</body>
+</html>

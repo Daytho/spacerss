@@ -1,0 +1,8 @@
+node_modules/
+.env
+
+# Runtime database artifacts. The seeded database itself (data/spacerss.db) is
+# committed so the project opens with articles and the test suite has data.
+data/*.db-wal
+data/*.db-shm
+data/*.pid
