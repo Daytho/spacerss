@@ -7,7 +7,50 @@ colour encode reach and seriousness.
 
 ---
 
-## Running it, from scratch
+## Three ways to run it
+
+| | What you need | What you do |
+|---|---|---|
+| **Run in the browser** (nothing to install) | A GitHub account | Click **Code ▸ Codespaces ▸ Create codespace**. It builds, installs and starts itself. |
+| **Double-click** | Node.js installed | Unzip, then double-click `start.bat` (Windows) or `start.command` (macOS). |
+| **Terminal** | Node.js installed | The step-by-step walkthrough below. |
+
+### Run it in the browser — no install at all
+
+On the repository page click the green **Code** button, choose the
+**Codespaces** tab, and click **Create codespace on main**.
+
+GitHub builds a container, installs the dependencies and starts the dashboard
+for you. When it finishes, a notification offers to open the forwarded port —
+click it and the dashboard opens in a browser tab. Nothing is installed on your
+own machine, and the codespace can be deleted afterwards from
+<https://github.com/codespaces>.
+
+### Double-click to run
+
+If you have Node.js installed, unzip the project and double-click:
+
+- **`start.bat`** on Windows
+- **`start.command`** on macOS
+
+The launcher handles everything the walkthrough below does by hand: it moves
+itself into the right folder, installs dependencies the first time, starts the
+server, and opens your browser. Leave the window it opens running while you use
+the dashboard; closing it stops the app.
+
+On macOS the first launch may be blocked because the file was downloaded from
+the internet. If that happens, right-click `start.command`, choose **Open**, and
+confirm once — macOS remembers the choice.
+
+If either launcher reports that Node.js is missing, install the LTS release from
+<https://nodejs.org>, then run the launcher again.
+
+---
+
+## Running it from a terminal, from scratch
+
+The launchers above do all of this for you. This is the manual version, for
+anyone who would rather drive it themselves or is troubleshooting.
 
 Follow these in order. The whole thing takes about two minutes, and the only
 thing you need installed is Node.js.
@@ -227,6 +270,9 @@ live data is a known shortcoming.
 ## Layout
 
 ```
+start.bat         double-click launcher (Windows)
+start.command     double-click launcher (macOS)
+.devcontainer/    GitHub Codespaces configuration
 server/           Express server, feed ingestion, scoring
   index.js        entry point
   feeds.js        the twelve RSS sources
@@ -240,4 +286,4 @@ data/             SQLite database (seeded)
 ```
 
 `restart.sh` is a Linux/macOS development helper and is not needed to run the
-project; use `npm start`.
+project; use `npm start` or a launcher.

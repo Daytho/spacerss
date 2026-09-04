@@ -1,0 +1,33 @@
+{
+  "name": "SpaceRSS",
+
+  // Node 22 matches the project's stated minimum. The image already carries
+  // node, npm and git, so nothing else needs installing.
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+
+  // Runs once, when the codespace is first created.
+  // --ignore-scripts mirrors .npmrc and the documented local setup.
+  "postCreateCommand": "npm ci --ignore-scripts",
+
+  // Runs every time the codespace is opened, so the dashboard is already
+  // running by the time the editor finishes loading.
+  "postAttachCommand": "npm start",
+
+  "forwardPorts": [4000],
+  "portsAttributes": {
+    "4000": {
+      "label": "SpaceRSS dashboard",
+      // Open in a real browser tab rather than the in-editor preview: the
+      // dashboard is a WebGL scene, which a full browser handles better.
+      "onAutoForward": "openBrowser"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  }
+}
