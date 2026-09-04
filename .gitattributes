@@ -1,0 +1,20 @@
+# Keep line endings predictable across Windows, macOS and Linux checkouts.
+
+# Text files are stored with LF in the repository.
+* text=auto eol=lf
+
+# Windows batch files are the exception: cmd.exe expects CRLF, and an LF-only
+# .bat can be mis-parsed around labels and multi-line blocks.
+*.bat text eol=crlf
+
+# Shell scripts must stay LF even on a Windows checkout, or the shebang line
+# carries a stray CR and the interpreter is not found.
+*.sh   text eol=lf
+*.command text eol=lf
+
+# Binary payloads: never apply end-of-line conversion to these. The seeded
+# SQLite database in particular would be corrupted by it.
+*.db   binary
+*.png  binary
+*.jpg  binary
+*.ico  binary
