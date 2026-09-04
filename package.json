@@ -1,6 +1,6 @@
 {
   "name": "spacerss",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Locally-hosted cybersecurity news dashboard rendered as a 3D solar system",
   "main": "server/index.js",
   "scripts": {
