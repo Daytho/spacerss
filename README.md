@@ -12,8 +12,12 @@ colour encode reach and seriousness.
 | | What you need | What you do |
 |---|---|---|
 | **Run in the browser** (nothing to install) | A GitHub account | Click **Code ▸ Codespaces ▸ Create codespace**. It builds, installs and starts itself. |
-| **Double-click** | Node.js installed | Unzip, then double-click `start.bat` (Windows) or `start.command` (macOS). |
+| **Double-click** | Node.js installed | Unzip, then double-click `start.bat` (Windows) or `start.command` (macOS — needs one extra step, see below). |
 | **Terminal** | Node.js installed | The step-by-step walkthrough below. |
+
+On macOS, files from a downloaded zip are blocked from running by default; the
+double-click route needs a one-time unblock, covered below. Windows has no such
+restriction, and Codespaces avoids it entirely.
 
 ### Run it in the browser — no install at all
 
@@ -38,12 +42,50 @@ itself into the right folder, installs dependencies the first time, starts the
 server, and opens your browser. Leave the window it opens running while you use
 the dashboard; closing it stops the app.
 
-On macOS the first launch may be blocked because the file was downloaded from
-the internet. If that happens, right-click `start.command`, choose **Open**, and
-confirm once — macOS remembers the choice.
-
 If either launcher reports that Node.js is missing, install the LTS release from
 <https://nodejs.org>, then run the launcher again.
+
+#### If macOS blocks `start.command`
+
+macOS tags everything extracted from a downloaded zip as untrusted, and on
+macOS 15 (Sequoia) and later it refuses to run those files, offering only
+**Move to Trash** or **Cancel**. There is no "Open Anyway" in that dialog —
+Apple removed the old right-click-to-bypass route.
+
+The file is fine; macOS just will not launch it by double-click. Any one of
+these works:
+
+**Run it through Terminal** — the most reliable, and no typing of paths.
+Open Terminal, type `bash` followed by a space, then drag `start.command` from
+Finder into the Terminal window and press Return:
+
+```
+bash /Users/you/Downloads/spacerss/start.command
+```
+
+This skips the check entirely, because Terminal is reading the file as text
+rather than launching it as a program. Everything else behaves exactly as if
+you had double-clicked it.
+
+**Or approve it in System Settings** — double-click `start.command` once and
+let it be blocked, then open **System Settings ▸ Privacy & Security** and scroll
+down. A message names the blocked file with an **Open Anyway** button beside it.
+Click that, then double-click the file again.
+
+**Or clear the flag once**, after which double-clicking works normally:
+
+```
+xattr -d com.apple.quarantine /Users/you/Downloads/spacerss/start.command
+```
+
+**Or sidestep it completely** by cloning instead of downloading the zip —
+files from `git clone` are never quarantined, so the launcher just runs:
+
+```
+git clone https://github.com/Daytho/spacerss.git
+```
+
+None of this affects Windows, and none of it applies if you use Codespaces.
 
 ---
 
@@ -168,6 +210,14 @@ harmlessly without it.
 ---
 
 ## If something goes wrong
+
+**macOS offers only "Move to Trash" or "Cancel" when opening `start.command`**
+
+Expected on macOS 15 and later for anything unzipped from a download. The file
+is not damaged. See
+[If macOS blocks `start.command`](#if-macos-blocks-startcommand) above — the
+quickest route is to open Terminal, type `bash `, drag the file in, and press
+Return.
 
 **`Could not read package.json` / `npm error code ENOENT`**
 
