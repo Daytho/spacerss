@@ -91,6 +91,36 @@ expectImpact('product model numbers are not counts',
   'Affected devices include the CHARX SEC-3150 and SEC-3000 charging controllers.',
   null);
 
+expectImpact('digit-prefix catalog numbers are not counts (Rockwell format)',
+  'Rockwell Automation 1756-ENBT Module',
+  'Rockwell Automation recommends that users upgrade to 1756-EN2T or '
+    + '1756-EN4TR. Users who are not able to upgrade should use best practices.',
+  null);
+
+expectImpact('slash-separated variant codes are not counts (6s/6m)',
+  'Bendix EC80 Brake ECU',
+  'Vendor fix ec80esp+ 6s/6m: Z266494 users should update their firmware. '
+    + 'Vendor fix ec80esp+ plc: Z266494 users should update their firmware.',
+  null);
+
+expectImpact('a single trailing digit in a product name is not a count (WEB3)',
+  'Tycon Systems TPDIN-Monitor-WEB3',
+  'TPDIN-Monitor-WEB3 versions 2.2.9 and prior are vulnerable. Vendor fix: '
+    + 'Tycon Systems has released TPDIN-Monitor-WEB3 Firmware v2.4.2.',
+  null);
+
+expectImpact('the trailing part of a three-segment version is not a count (7.1.5)',
+  'All-Line Equipment Company Fuel-Boss',
+  'Fuel-Boss running versions up to and including PHP 7.1.5 is vulnerable '
+    + 'because certain FPM configurations allow arbitrary code execution.',
+  null);
+
+expectImpact('a real count survives despite looking similar to the traps above',
+  'AI agent instance exposure study',
+  'Only three of the eight checks are meaningful, but 67,110 of 530,509 users '
+    + 'are on an instance that runs one.',
+  { kind: 'people', value: 530509 });
+
 expectImpact('CWE identifier digits are not a count',
   'Rently Smart Home',
   'CWE-522 Insufficiently Protected Credentials. CWE-798 Use of Hard-coded Credentials.',

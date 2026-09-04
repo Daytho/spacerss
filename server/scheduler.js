@@ -99,6 +99,13 @@ async function refreshNow() {
   if (sinceLast < MIN_MANUAL_REFRESH_MS) {
     return { inserted: 0, skipped: true, retryAfterMs: MIN_MANUAL_REFRESH_MS - sinceLast };
   }
+  // Claim the cooldown window *before* awaiting the fetch, not after. ingest()
+  // only sets lastIngestAt once it finishes — a network round trip to twelve
+  // feeds — so two overlapping calls (the exact "dashboard open in two tabs"
+  // case this guard exists for) would both read the stale timestamp, both pass
+  // the check above, and both fire concurrent fetches. There is no `await`
+  // between the check and this line, so nothing can interleave between them.
+  lastIngestAt = Date.now();
   const inserted = await ingest();
   return { inserted, skipped: false };
 }

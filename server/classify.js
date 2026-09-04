@@ -192,6 +192,7 @@ function scaleBonus(text) {
 
 function classify({ source, title, summary, publishedAt, now = Date.now() }) {
   const text = normalize(`${title} ${summary || ''}`);
+  const headline = normalize(title);
 
   const categories = CATEGORY_PATTERNS
     .filter(([, pattern]) => pattern.test(text))
@@ -232,7 +233,17 @@ function classify({ source, title, summary, publishedAt, now = Date.now() }) {
   if (categories.includes('cve') || categories.includes('malware')) score += 1;
 
   // --- damping: analysis pieces that survived the gate shouldn't outrank events ---
-  if (/\bhow to\b|\bwhy you\b|\blessons\b|\bbest practices\b|\bpredictions?\b|\bopinion\b/.test(text)) {
+  //
+  // Matched against the HEADLINE ONLY, same reasoning as the relevance gate's
+  // NOISE list above: these phrases mark commentary in a title, but are
+  // ordinary advisory boilerplate in body text. Nearly every CISA/ICS-CERT
+  // summary ends with mitigation guidance ("...CISA recommends users follow
+  // best practices...", "...describes how to disable the affected service..."),
+  // so matching against the full text silently docked 2 points from ~35
+  // legitimate vulnerability advisories — enough to drop several a full
+  // colour tier — for boilerplate that has nothing to do with the piece being
+  // opinion or analysis.
+  if (/\bhow to\b|\bwhy you\b|\blessons\b|\bbest practices\b|\bpredictions?\b|\bopinion\b/.test(headline)) {
     score -= 2;
   }
 

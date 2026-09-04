@@ -3,7 +3,7 @@
  * version of the gate got wrong. Run: node server/classify.test.js
  */
 const db = require('./db');
-const { assessRelevance, extractCvss } = require('./classify');
+const { assessRelevance, extractCvss, classify } = require('./classify');
 
 // [title fragment to look up in the DB, expected relevance, why]
 const CASES = [
@@ -104,4 +104,54 @@ for (const [text, expected] of CVSS_CASES) {
 }
 console.log(`cvss extraction: ${cvssPass} passed, ${cvssFail} failed`);
 
-process.exit(fail === 0 && cvssFail === 0 ? 0 : 1);
+// --- severity damping is headline-only ------------------------------------
+// Nearly every CISA/ICS-CERT advisory summary ends with generic mitigation
+// boilerplate ("CISA recommends users follow best practices...", "...describes
+// how to disable the affected service..."). Matching the commentary-damping
+// patterns against the full text silently docked 2 points off real
+// vulnerability advisories for having a mitigation section — enough to drop
+// several a full colour tier. The check must only fire on the headline.
+// Each pair holds the summary constant except for the one trigger phrase, so
+// any score difference is attributable to that phrase alone rather than to
+// other legitimate signals ("denial-of-service", "emergency patch") the
+// summary also happens to carry.
+const DAMPING_CASES = [
+  {
+    title: 'Rockwell Automation RSLinx Classic',
+    withTrigger: 'Successful exploitation could cause a denial-of-service. '
+      + 'CISA recommends users follow best practices and defense-in-depth strategies.',
+    withoutTrigger: 'Successful exploitation could cause a denial-of-service. '
+      + 'CISA recommends users follow standard guidance and defense-in-depth strategies.',
+    reason: 'CISA advisory boilerplate mentions "best practices" in the mitigation section',
+  },
+  {
+    title: 'CISA Urges SharePoint Hardening After New Exploitations',
+    withTrigger: 'This advisory describes how to disable the affected service and '
+      + 'apply the emergency patch immediately.',
+    withoutTrigger: 'This advisory describes steps to disable the affected service and '
+      + 'apply the emergency patch immediately.',
+    reason: 'mitigation guidance says "how to", not the headline',
+  },
+];
+
+let dampPass = 0;
+let dampFail = 0;
+for (const {
+  title, withTrigger, withoutTrigger, reason,
+} of DAMPING_CASES) {
+  const source = 'CISA Cybersecurity Advisories';
+  const scoreWith = classify({ source, title, summary: withTrigger }).severityScore;
+  const scoreWithout = classify({ source, title, summary: withoutTrigger }).severityScore;
+  if (scoreWith === scoreWithout) {
+    dampPass += 1;
+  } else {
+    dampFail += 1;
+    console.log(
+      `  FAIL  damping leaked from body text: score ${scoreWithout} (phrase removed) `
+      + `-> ${scoreWith} (phrase present)\n        "${title}" (${reason})`,
+    );
+  }
+}
+console.log(`severity damping is headline-only: ${dampPass} passed, ${dampFail} failed`);
+
+process.exit(fail === 0 && cvssFail === 0 && dampFail === 0 ? 0 : 1);

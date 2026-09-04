@@ -118,10 +118,18 @@ function stripTechnicalIdentifiers(text) {
     .replace(/\b(?:av|ac|pr|ui|[csi]):[a-z](?:\/[a-z]+:[a-z])*/g, ' ') // CVSS vectors
     .replace(/[<>]=?\s*v?\d+(?:\.\d+)*/g, ' ') // "<=4.50"
     .replace(/\bv\d+(?:\.\d+)*/g, ' ')
-    // Product model numbers: letters followed by digits, optionally hyphenated
-    // (SEC-3000, DS925+, Galaxy S25, IoT2050, EC80). Their digits are part of a
-    // name, and sit right next to words like "devices" in advisory text.
-    .replace(/\b[a-z]{1,10}-?\d{2,}\+?\b/g, ' ');
+    // Product model numbers, letter-prefix: letters followed by digits,
+    // optionally hyphenated (SEC-3000, DS925+, Galaxy S25, IoT2050, EC80).
+    // Their digits are part of a name, and sit right next to words like
+    // "devices" in advisory text.
+    .replace(/\b[a-z]{1,10}-?\d{2,}\+?\b/g, ' ')
+    // Product model numbers, digit-prefix: digits, a hyphen, then letters
+    // (1756-EN4TR, 1756-ENBT — Rockwell's own catalog-number format). Natural
+    // prose never hyphenates a count directly onto its unit ("1756-users"
+    // does not occur; "1,756 users" does), so this is a safe, precise
+    // signal. Without it, "upgrade to 1756-EN2T or 1756-EN4TR. Users who are
+    // not able to..." reads as "1756 users".
+    .replace(/\b\d{2,}-[a-z][a-z0-9]*\b/g, ' ');
 }
 
 /**
@@ -159,7 +167,12 @@ function extractImpact(title, summary) {
   // Match the quantity, then scan the next few words for the unit noun. A single
   // regex with a lazy filler group only ever tests the first following word, so
   // "153 million drivers licenses" would test "drivers", miss, and give up.
-  const quantityRe = /(\d[\d,]*(?:\.\d+)?)\s*(hundred|thousand|million|billion|trillion|k|m|b)?\b/g;
+  // Leading \b matters: without it the regex can start a match on a digit
+  // embedded at the *end* of a preceding word — "TPDIN-Monitor-WEB3" (a
+  // single trailing digit, too short for the model-number stripper's \d{2,}
+  // threshold) otherwise contributes a bare "3" with nothing before it to
+  // disqualify.
+  const quantityRe = /\b(\d[\d,]*(?:\.\d+)?)\s*(hundred|thousand|million|billion|trillion|k|m|b)?\b/g;
   for (const m of scanText.matchAll(quantityRe)) {
     const [, rawNum, multiplier] = m;
     const before = scanText.slice(Math.max(0, m.index - 24), m.index);
@@ -167,6 +180,21 @@ function extractImpact(title, summary) {
     // string form ("CVSS v4 9.8") puts a version between the two.
     if (/cvss/.test(before)) continue;
     if (DISQUALIFYING_PREFIX.test(before)) continue;
+    // A slash immediately before means this is one half of an "X/Y" enumerated
+    // pair — a hardware/firmware variant code ("6s/6m"), not a quantity. Prose
+    // never writes a real count this way. Without this guard, once the
+    // adjacent variant code is stripped as an identifier, "...6s/6m: Z266494
+    // users should update..." collapses to "6m" sitting directly next to
+    // "users" and reads as "6 million users".
+    if (before.endsWith('/')) continue;
+    // A three-part version "7.1.5" is two regex matches, not one — the decimal
+    // group only allows a single dot, so this regex first matches "7.1" (which
+    // looksLikeVersion catches by checking what follows), then resumes and
+    // matches "5" on its own. Nothing about "5" in isolation looks like a
+    // version, so it survived as a bare quantity. Catch it from the other
+    // direction: a number directly preceded by "<digit>." is the tail of a
+    // version string someone already matched, not a fresh count.
+    if (/\d\.$/.test(before)) continue;
     if (looksLikeVersion(rawNum, scanText.slice(m.index + rawNum.length))) continue;
 
     const n = parseNumber(rawNum);

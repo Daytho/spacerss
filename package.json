@@ -5,7 +5,7 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "test": "node server/classify.test.js && node server/ranking.test.js && node server/impact.test.js",
+    "test": "node server/classify.test.js && node server/ranking.test.js && node server/impact.test.js && node server/scheduler.test.js",
     "rescore": "node server/rescore.js",
     "restart": "./restart.sh"
   },

@@ -1,4 +1,8 @@
-require('dotenv').config();
+// quiet: true suppresses dotenv's startup banner. It prints on every run even
+// when there is no .env file at all, and its text rotates through promotional
+// tips — noise that reads like a warning to anyone running this for the first
+// time.
+require('dotenv').config({ quiet: true });
 const os = require('os');
 const path = require('path');
 const express = require('express');
@@ -64,11 +68,12 @@ app.listen(PORT, '127.0.0.1', () => {
   scheduler.start();
 });
 
+// Announced only when a tailnet is actually present. Having no Tailscale
+// interface is the normal case, not a condition worth reporting — saying so on
+// every startup just raises a question for anyone who has never heard of it.
 const tailscaleAddress = findTailscaleAddress();
 if (tailscaleAddress) {
   app.listen(PORT, tailscaleAddress, () => {
     console.log(`SpaceRSS also listening on Tailscale at http://${tailscaleAddress}:${PORT}`);
   });
-} else {
-  console.log('SpaceRSS: no Tailscale interface found at startup; staying on loopback only.');
 }

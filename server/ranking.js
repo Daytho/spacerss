@@ -200,15 +200,19 @@ function significantSimilarity(aTitle, bTitle) {
 function collapseDuplicates(rows) {
   const { tokens, distinctive } = analyzeTokens(rows);
   const leads = rows.map((row) => leadingTokens(row.title));
+  const publishedMs = rows.map((row) => new Date(row.published_at).getTime());
 
-  function isSameStory(i, j) {
+  // Content match only — the time bound is enforced separately, at the group
+  // level, below. A pairwise-only check here is not enough: single-linkage
+  // clustering joins a new row to a group if it matches *any* member, so a
+  // chain of daily posts (each within 72h of the previous one) can walk the
+  // group's total span arbitrarily far past MERGE_WINDOW_HOURS even though no
+  // single pair in the chain violates it. CISA's recurring "Adds Known
+  // Exploited Vulnerabilities" headline did exactly this — nine posts each
+  // ~24h from a neighbor chained into one group spanning 96 hours.
+  function isSameStoryContent(i, j) {
     const a = rows[i];
     const b = rows[j];
-
-    const hoursApart = Math.abs(
-      new Date(a.published_at).getTime() - new Date(b.published_at).getTime(),
-    ) / 3_600_000;
-    if (hoursApart > MERGE_WINDOW_HOURS) return false;
 
     if (a.dedupe_key && b.dedupe_key && a.dedupe_key === b.dedupe_key) return true;
 
@@ -240,10 +244,20 @@ function collapseDuplicates(rows) {
 
   const groups = [];
   rows.forEach((row, i) => {
-    // Compare against every member, not just the group head: an outlet's
-    // retelling may resemble a later member of a group without resembling
-    // whichever item happened to open it.
-    const match = groups.find((group) => group.some(({ index }) => isSameStory(i, index)));
+    const match = groups.find((group) => {
+      // Compare against every member, not just the group head: an outlet's
+      // retelling may resemble a later member of a group without resembling
+      // whichever item happened to open it.
+      const contentMatch = group.some(({ index }) => isSameStoryContent(i, index));
+      if (!contentMatch) return false;
+
+      // Group-level time bound: joining must not stretch the group's total
+      // span past MERGE_WINDOW_HOURS, even though the content match above
+      // only had to hold against one member.
+      const times = group.map(({ index }) => publishedMs[index]);
+      const span = Math.max(publishedMs[i], ...times) - Math.min(publishedMs[i], ...times);
+      return span / 3_600_000 <= MERGE_WINDOW_HOURS;
+    });
     if (match) match.push({ row, index: i });
     else groups.push([{ row, index: i }]);
   });

@@ -24,7 +24,11 @@ router.get('/', (req, res) => {
   // filter is accepted in the query string for API symmetry with section 8, but slot
   // selection is filter-independent — the frontend dims non-matching planets in place
   // rather than re-fetching, so the scene stays spatially stable when the filter changes.
-  const slots = Math.max(0, parseInt(req.query.slots, 10) || 20);
+  // `|| 20` would also catch an explicit slots=0 — a legitimate request for no
+  // unpinned articles — since 0 is falsy, and silently substitute the default
+  // instead. Only fall back on an actual parse failure.
+  const parsedSlots = parseInt(req.query.slots, 10);
+  const slots = Math.max(0, Number.isNaN(parsedSlots) ? 20 : parsedSlots);
   const now = Date.now();
 
   const pinned = pinnedStmt.all();
