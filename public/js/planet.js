@@ -1,4 +1,6 @@
 import * as THREE from '/vendor/three/build/three.module.js';
+import { verticalFovFor } from './scene.js';
+import { assignSlots } from './slots.mjs';
 
 /**
  * Two independent visual channels:
@@ -33,9 +35,22 @@ const NEAR_DISTANCE = 62;
 const FAR_DISTANCE = 230;
 const PINNED_DISTANCE = 52;
 const AGE_REFERENCE_HOURS = 72;
-// Keep the field close to a horizontal band; a full sphere puts most planets
-// out of frame above and below the viewer.
-const ELEVATION_SPREAD = 0.42;
+// How far above and below the viewer the field reaches.
+//
+// This has to track the camera's *vertical* angle of view, not the number of
+// planets. The vertical angle is derived from the aspect ratio, so a wide
+// monitor sees a shorter slice of sky than a laptop does: a fixed spread that
+// filled the frame at 16:9 threw planets clean off the top and bottom at 21:9.
+// Matching roughly half the vertical view keeps the field filling the frame
+// without spilling out of it.
+const ELEVATION_SPREAD_MIN = 0.18;
+const ELEVATION_SPREAD_MAX = 0.62;
+
+function elevationSpreadFor() {
+  const aspect = window.innerWidth / Math.max(1, window.innerHeight);
+  const vFovRad = (verticalFovFor(aspect) * Math.PI) / 180;
+  return Math.max(ELEVATION_SPREAD_MIN, Math.min(ELEVATION_SPREAD_MAX, vFovRad * 0.5));
+}
 
 const FADE_FLOOR = 0.28;
 const DIM_OPACITY = 0.08;
@@ -190,6 +205,27 @@ export function createPlanet(article, { showPinRing = true } = {}) {
   return group;
 }
 
+/**
+ * Release a planet's GPU resources.
+ *
+ * Geometries and materials belong to the planet and are always disposed.
+ * Textures are not all its own: the surface texture is generated per planet and
+ * is owned here, but the tier glow and the pin ring come from module-level
+ * caches shared by every planet of that colour. A blanket traverse-and-dispose
+ * tears those down while the cache goes on handing the same texture object to
+ * new planets — on the live feed six halos shared just two texture objects, so
+ * one planet being rebuilt disposed the glow out from under five others.
+ */
+export function disposePlanet(group) {
+  const owned = group.userData.mesh;
+  group.traverse((obj) => {
+    if (obj.geometry) obj.geometry.dispose();
+    if (!obj.material) return;
+    if (obj === owned && obj.material.map) obj.material.map.dispose();
+    obj.material.dispose();
+  });
+}
+
 const glowCache = new Map();
 function makeRadialGlow(colorHex) {
   if (glowCache.has(colorHex)) return glowCache.get(colorHex);
@@ -235,31 +271,46 @@ export function distanceScale() {
  * so planets approach, reveal their label, and recede again.
  */
 /**
- * Spread planets evenly around the viewer.
+ * Place the field's planets around the viewer.
  *
- * Azimuth taken straight from orbit_seed clumps badly at this population size —
- * random angles leave crowded arcs next to empty ones. Assigning evenly spaced
- * slots in a stable id order and jittering each by its own seed keeps the field
- * balanced while remaining reproducible across reloads.
+ * The placement rules live in slots.mjs, which knows nothing about three.js or
+ * the DOM so it can be tested directly; this wrapper supplies the numbers that
+ * depend on the viewport and applies the result to the scene graph.
+ *
+ * Two earlier versions of this got the stability wrong, both in ways that were
+ * only visible on a running feed. Numbering slots by an article's index in the
+ * sorted set renumbered every article after any removal — measured live, one
+ * article leaving moved 18 of the remaining 19 planets, on every five-minute
+ * refresh. Deriving each slot from a hash of the article id fixed that in
+ * principle but not in practice: the ring holds exactly as many slots as there
+ * are articles, so it is always completely full, and in a full table the probe
+ * chains that resolve hash collisions are long enough that a single removal
+ * still moved 9 of 29.
+ *
+ * @param groups     live planet groups
+ * @param slotCount  size of the ring; pass the viewport's slot budget so the
+ *                   spacing does not change as articles come and go
  */
-export function assignFieldSlots(groups) {
-  const ordered = [...groups].sort((a, b) => (
-    a.userData.article.id < b.userData.article.id ? -1 : 1
-  ));
-  const total = ordered.length || 1;
-  const GOLDEN = 0.6180339887;
+export function assignFieldSlots(groups, slotCount) {
+  const all = [...groups];
+  const total = Math.max(slotCount || 0, all.length, 1);
 
-  ordered.forEach((group, index) => {
-    const seed = group.userData.article.orbit_seed ?? 0.5;
-    const spacing = (Math.PI * 2) / total;
-    group.userData.azimuth = index * spacing + (seed - 0.5) * spacing * 0.55;
+  // Resizing the ring invalidates every slot, so those are all reassigned.
+  const resized = all.some((g) => g.userData.slotTotal !== total);
 
-    // Golden-ratio sequence for elevation: successive planets land far apart
-    // vertically, so the field fills the frame instead of settling into a band
-    // across the middle. Hashing the seed alone left the top of the view empty.
-    const t = (index * GOLDEN + seed * 0.13) % 1;
-    group.userData.elevation = (t - 0.5) * 2 * ELEVATION_SPREAD;
-  });
+  const placed = assignSlots(all.map((g) => ({
+    id: g.userData.article.id,
+    seed: g.userData.article.orbit_seed ?? 0.5,
+    slot: resized ? null : g.userData.slot,
+  })), total, elevationSpreadFor());
+
+  for (const group of all) {
+    const p = placed.get(group.userData.article.id);
+    group.userData.slot = p.slot;
+    group.userData.slotTotal = total;
+    group.userData.azimuth = p.azimuth;
+    group.userData.elevation = p.elevation;
+  }
 }
 
 /**

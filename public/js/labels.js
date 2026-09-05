@@ -19,14 +19,20 @@ import { distanceScale } from './planet.js';
 const NEAR_LIMIT = 80;
 const FAR_LIMIT = 165;
 // Never show more than this many at once, however crowded the field gets. A
-// phone has far less room, so it shows fewer.
+// phone has far less room, so it shows fewer; a wide monitor has room for more.
 function maxVisible() {
-  return window.innerWidth < 768 ? 3 : 7;
+  const w = window.innerWidth;
+  if (w < 768) return 3;
+  if (w < 1600) return 7;
+  if (w < 2200) return 9;
+  return 11;
 }
 // Room reserved for the chrome at each end of the frame: the brand and filter
 // bar at the top, the status line and legend at the bottom.
 const BOTTOM_SAFE_AREA = 56;
 const TOP_SAFE_AREA = 66;
+// Minimum clear space between two label boxes before they count as colliding.
+const LABEL_GAP = 6;
 
 const TIER_CLASS = {
   5: 'tier-5', 4: 'tier-4', 3: 'tier-3', 2: 'tier-2', 1: 'tier-1',
@@ -113,10 +119,14 @@ export function createLabelLayer(container) {
 
     // Nearest first, so the closest planets win the limited label slots.
     candidates.sort((a, b) => a.distance - b.distance);
-    const shown = candidates.slice(0, maxVisible());
-    const shownIds = new Set(shown.map((c) => c.article.id));
 
-    for (const c of shown) {
+    const limit = maxVisible();
+    const shownIds = new Set();
+    const placed = []; // boxes already committed this frame
+
+    for (const c of candidates) {
+      if (shownIds.size >= limit) break;
+
       const entry = ensureEntry(c.article);
       if (entry.headline.textContent !== (c.article.label_headline || '')) {
         entry.headline.textContent = c.article.label_headline || '';
@@ -127,20 +137,41 @@ export function createLabelLayer(container) {
 
       // Offset below the planet, scaled by its on-screen size so the label
       // clears large planets without floating away from small ones.
+      //
+      // The cap used to be a flat 90px, which a near planet outgrows on any
+      // large display — its rendered radius reaches 77px at 2560 wide and keeps
+      // climbing — so the label rode up onto the sphere instead of sitting
+      // under it. Scaling the ceiling with the viewport keeps it clear.
       const screenScale = (rect.height / (2 * Math.tan((camera.fov * Math.PI) / 360)));
       const pixelRadius = (c.radius / c.distance) * screenScale;
-      const offset = Math.min(90, pixelRadius + 12);
+      const offset = Math.min(rect.height * 0.24, pixelRadius + 14);
 
       // Keep the box inside the viewport. A label that runs off the edge or
       // slides under the status bar is worse than one sitting slightly off its
       // planet, so clamp rather than letting it clip.
-      const halfWidth = (entry.el.offsetWidth || 150) / 2;
+      const width = entry.el.offsetWidth || 150;
       const height = entry.el.offsetHeight || 34;
+      const halfWidth = width / 2;
       const x = Math.max(halfWidth + 8, Math.min(rect.width - halfWidth - 8, c.x));
       const y = Math.max(
         TOP_SAFE_AREA,
         Math.min(rect.height - height - BOTTOM_SAFE_AREA, c.y + offset),
       );
+
+      // A denser field puts more labels in frame at once, and two stacked on
+      // top of each other are less readable than one. Nearest wins the spot;
+      // anything that would land on top of an already-placed box is dropped for
+      // this frame and gets its turn as the field drifts.
+      const box = {
+        l: x - halfWidth, r: x + halfWidth, t: y, b: y + height,
+      };
+      const collides = placed.some((p) => (
+        box.l < p.r + LABEL_GAP && box.r > p.l - LABEL_GAP
+        && box.t < p.b + LABEL_GAP && box.b > p.t - LABEL_GAP
+      ));
+      if (collides) continue;
+      placed.push(box);
+      shownIds.add(c.article.id);
 
       entry.el.style.transform = `translate(-50%, 0) translate(${x}px, ${y}px)`;
       entry.el.style.opacity = c.opacity.toFixed(3);

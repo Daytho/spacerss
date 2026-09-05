@@ -20,8 +20,12 @@
 
     <div id="status-line" class="status-line">Loading...</div>
 
-    <div id="info-panel" class="info-panel">
-      <button id="info-close" class="close-btn">&times;</button>
+    <!-- Sits before the panel so the panel paints over it, and dims the scene
+         while an article is open. Clicking it closes the panel. -->
+    <div id="info-backdrop" class="info-backdrop"></div>
+
+    <div id="info-panel" class="info-panel" role="dialog" aria-modal="true" aria-labelledby="info-title">
+      <button id="info-close" class="close-btn" aria-label="Close article">&times;</button>
       <div id="info-source" class="source-line"></div>
       <h2 id="info-title"></h2>
       <div id="info-categories" class="categories"></div>

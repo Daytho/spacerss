@@ -1,11 +1,11 @@
 {
   "name": "spacerss",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Locally-hosted cybersecurity news dashboard rendered as a 3D solar system",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "test": "node server/classify.test.js && node server/ranking.test.js && node server/impact.test.js && node server/scheduler.test.js",
+    "test": "node server/classify.test.js && node server/ranking.test.js && node server/impact.test.js && node server/slots.test.js && node server/scheduler.test.js",
     "rescore": "node server/rescore.js",
     "restart": "./restart.sh"
   },

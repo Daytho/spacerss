@@ -43,7 +43,27 @@ html, body {
   z-index: 10;
 }
 
-.hud > * {
+/* Only the boxes that actually take input opt back in to pointer events.
+   This used to be `.hud > *`, which handed `auto` to `.topbar` — a transparent
+   full-width strip roughly 42px tall spanning the whole window. It is invisible
+   but it swallowed every click along the top of the scene, so a planet drifting
+   through that band could not be selected at all. Targeting the real controls
+   instead leaves the gaps between them transparent to the canvas underneath. */
+.brand,
+.filter-bar,
+.refresh-btn,
+.status-line,
+.legend {
+  pointer-events: auto;
+}
+
+/* The panel and its backdrop take input only while actually open. Keying this
+   on the class rather than on visibility matters because both fade out over
+   ~180ms: for that whole window a closed backdrop would still be covering the
+   scene, and a click aimed at a planet immediately after dismissing an article
+   would be swallowed by it. */
+.info-panel.open,
+.info-backdrop.open {
   pointer-events: auto;
 }
 
@@ -180,25 +200,75 @@ html, body {
   -webkit-backdrop-filter: blur(8px);
 }
 
+/* Dims the scene behind an open article and acts as the click-outside target.
+ *
+ * `visibility` is switched, not transitioned. Transitioning it in both
+ * directions leaves the element computing as hidden for the first frame after
+ * opening, and a hidden element is not hit-testable: a click arriving in that
+ * window falls straight through the backdrop to the canvas and selects another
+ * planet instead of dismissing the article. So visibility flips to visible with
+ * no delay on open, and its return to hidden is delayed until the fade has
+ * finished on close. */
+.info-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 5, 9, 0.66);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 180ms ease-out, visibility 0s linear 180ms;
+}
+
+.info-backdrop.open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 180ms ease-out, visibility 0s;
+}
+
+/* Centred on the viewport rather than pinned to a corner. On a large monitor a
+   top-right panel lands a long way from where the eye already is — the planet
+   that was just clicked, near the middle of the screen. */
 .info-panel {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 50%;
+  left: 50%;
   width: 340px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 32px);
   overflow-y: auto;
-  background: var(--panel-bg);
+  background: rgba(10, 14, 22, 0.86);
   border: 1px solid var(--panel-border);
   border-radius: 4px;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
   padding: 18px;
-  display: none;
+  opacity: 0;
+  /* Hidden rather than merely transparent, so a closed panel is out of the tab
+     order and its buttons cannot be reached by keyboard. Same visibility
+     switching as the backdrop above — see the note there. */
+  visibility: hidden;
+  transform: translate(-50%, -50%) scale(0.97);
+  transition: opacity 160ms ease-out, transform 160ms ease-out,
+    visibility 0s linear 160ms;
 }
 
 .info-panel.open {
-  display: block;
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, -50%) scale(1);
+  transition: opacity 160ms ease-out, transform 160ms ease-out, visibility 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .info-panel,
+  .info-backdrop {
+    transition: none;
+  }
+
+  .info-panel,
+  .info-panel.open {
+    transform: translate(-50%, -50%);
+  }
 }
 
 .info-panel .close-btn {
@@ -424,13 +494,22 @@ html, body {
     padding: 6px 10px;
   }
 
+  /* A phone keeps the bottom-sheet treatment: centring a panel vertically on a
+     small screen buries it behind the thumb and leaves the scene invisible
+     above and below it. The backdrop still applies. */
   .info-panel {
     top: auto;
     bottom: 12px;
     left: 12px;
     right: 12px;
     width: auto;
+    max-width: none;
     max-height: 62vh;
+    transform: translateY(14px);
+  }
+
+  .info-panel.open {
+    transform: translateY(0);
   }
 }
 

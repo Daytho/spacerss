@@ -19,7 +19,7 @@ const PORT = process.env.PORT || 4000;
 // which is indistinguishable from the fix not working.
 app.use(express.static(path.join(__dirname, '..', 'public'), {
   setHeaders(res, filePath) {
-    if (/\.(?:html|js|css)$/.test(filePath)) res.setHeader('Cache-Control', 'no-cache');
+    if (/\.(?:html|m?js|css)$/.test(filePath)) res.setHeader('Cache-Control', 'no-cache');
   },
 }));
 // The three.js bundle is large and only changes when the dependency does.

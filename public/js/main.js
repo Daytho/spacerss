@@ -1,6 +1,7 @@
 import { initScene, setupPlanetClicks } from './scene.js';
 import {
   createPlanet, updatePlanetTransform, updatePlanetAppearance, assignFieldSlots, rotationToFace,
+  disposePlanet,
 } from './planet.js';
 import { createLabelLayer } from './labels.js';
 
@@ -15,15 +16,32 @@ const labels = createLabelLayer(container);
 
 const planetGroups = new Map(); // article id -> THREE.Group
 let currentFilter = 'all';
-let isMobile = window.innerWidth < MOBILE_BREAKPOINT;
 let hasOriented = false;
 
 const statusLine = document.getElementById('status-line');
 const loadingMsg = document.getElementById('loading-msg');
 
+// How many planets go in the field.
+//
+// A wide monitor used to be served the same 20 as a laptop. The horizontal
+// field of view is held constant, so those extra pixels went to empty space
+// between the same few planets rather than to more news: measured at
+// 3440x1440, only 3 of the 20 were on screen at once. Scaling the count with
+// width fills the frame with articles instead of with black.
+const SLOT_STEPS = [
+  { upTo: MOBILE_BREAKPOINT, slots: 10 },
+  { upTo: 1100, slots: 18 },
+  { upTo: 1600, slots: 24 },
+  { upTo: 2200, slots: 30 },
+  { upTo: Infinity, slots: 38 },
+];
+
 function slotsForViewport() {
-  return window.innerWidth < MOBILE_BREAKPOINT ? 10 : 20;
+  const w = window.innerWidth;
+  return SLOT_STEPS.find((step) => w < step.upTo).slots;
 }
+
+let currentSlots = slotsForViewport();
 
 function matchesCurrentFilter(article) {
   if (currentFilter === 'all') return true;
@@ -38,13 +56,7 @@ async function fetchArticles() {
 
 function disposeGroup(group) {
   field.remove(group);
-  group.traverse((obj) => {
-    if (obj.geometry) obj.geometry.dispose();
-    if (obj.material) {
-      if (obj.material.map && obj.material.map.dispose) obj.material.map.dispose();
-      obj.material.dispose();
-    }
-  });
+  disposePlanet(group);
 }
 
 function renderArticles(articles) {
@@ -84,7 +96,7 @@ function renderArticles(articles) {
     }
   }
 
-  assignFieldSlots(planetGroups.values());
+  assignFieldSlots(planetGroups.values(), slotsForViewport());
 
   // On the first load, turn the field so the most severe story is the one in
   // front of the viewer instead of an arbitrary slot.
@@ -174,12 +186,20 @@ async function manualRefresh() {
 refreshBtn.addEventListener('click', manualRefresh);
 
 // --- Breakpoint watcher ---
+// Refetch only when the viewport crosses into a different slot budget, not on
+// every resize event.
 window.addEventListener('resize', () => {
-  const nowMobile = window.innerWidth < MOBILE_BREAKPOINT;
-  if (nowMobile !== isMobile) {
-    isMobile = nowMobile;
+  const next = slotsForViewport();
+  if (next !== currentSlots) {
+    currentSlots = next;
     refreshArticles();
+    return;
   }
+  // Same slot budget, so no refetch is needed — but how far the field spreads
+  // above and below the viewer is derived from the viewport's aspect ratio,
+  // which has just changed. Without this the spread stays stale until the next
+  // refresh, up to five minutes later.
+  assignFieldSlots(planetGroups.values(), currentSlots);
 });
 
 // --- Info panel ---
@@ -193,6 +213,7 @@ const infoLink = document.getElementById('info-link');
 const pinBtn = document.getElementById('pin-btn');
 const saveBtn = document.getElementById('save-btn');
 const closeBtn = document.getElementById('info-close');
+const infoBackdrop = document.getElementById('info-backdrop');
 
 let currentArticle = null;
 const inFlight = new Set();
@@ -244,9 +265,21 @@ function openInfoPanel(article) {
   infoLink.href = article.link;
   paintActionButtons(article);
   infoPanel.classList.add('open');
+  infoBackdrop.classList.add('open');
 }
 
-closeBtn.addEventListener('click', () => infoPanel.classList.remove('open'));
+function closeInfoPanel() {
+  infoPanel.classList.remove('open');
+  infoBackdrop.classList.remove('open');
+}
+
+closeBtn.addEventListener('click', closeInfoPanel);
+// The backdrop covers the scene whenever the panel is open, so any click that
+// reaches it is by definition a click outside the panel.
+infoBackdrop.addEventListener('click', closeInfoPanel);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && infoPanel.classList.contains('open')) closeInfoPanel();
+});
 
 /**
  * Toggle pin/save with an optimistic update: repaint the button immediately so

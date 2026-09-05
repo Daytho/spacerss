@@ -1,6 +1,6 @@
 import { initScene, setupPlanetClicks } from './scene.js';
 import {
-  createPlanet, updatePlanetTransform, updatePlanetAppearance, assignFieldSlots,
+  createPlanet, updatePlanetTransform, updatePlanetAppearance, assignFieldSlots, disposePlanet,
 } from './planet.js';
 import { createLabelLayer } from './labels.js';
 
@@ -22,13 +22,7 @@ async function fetchSaved() {
 
 function disposeGroup(group) {
   field.remove(group);
-  group.traverse((obj) => {
-    if (obj.geometry) obj.geometry.dispose();
-    if (obj.material) {
-      if (obj.material.map && obj.material.map.dispose) obj.material.map.dispose();
-      obj.material.dispose();
-    }
-  });
+  disposePlanet(group);
 }
 
 function renderArticles(articles) {
@@ -42,7 +36,7 @@ function renderArticles(articles) {
     planetGroups.set(article.id, group);
   }
 
-  assignFieldSlots(planetGroups.values());
+  assignFieldSlots(planetGroups.values(), planetGroups.size);
 
   if (loadingMsg) loadingMsg.remove();
   if (statusLine) {
@@ -87,6 +81,7 @@ const infoLink = document.getElementById('info-link');
 const pinBtn = document.getElementById('pin-btn');
 const saveBtn = document.getElementById('save-btn');
 const closeBtn = document.getElementById('info-close');
+const infoBackdrop = document.getElementById('info-backdrop');
 
 let currentArticle = null;
 const inFlight = new Set();
@@ -129,9 +124,21 @@ function openInfoPanel(article) {
   infoLink.href = article.link;
   paintActionButtons(article);
   infoPanel.classList.add('open');
+  infoBackdrop.classList.add('open');
 }
 
-closeBtn.addEventListener('click', () => infoPanel.classList.remove('open'));
+function closeInfoPanel() {
+  infoPanel.classList.remove('open');
+  infoBackdrop.classList.remove('open');
+}
+
+closeBtn.addEventListener('click', closeInfoPanel);
+// The backdrop covers the scene whenever the panel is open, so any click that
+// reaches it is by definition a click outside the panel.
+infoBackdrop.addEventListener('click', closeInfoPanel);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && infoPanel.classList.contains('open')) closeInfoPanel();
+});
 
 // Optimistic toggle — see the note in main.js.
 async function toggleField(fieldName) {
@@ -155,7 +162,7 @@ async function toggleField(fieldName) {
       paintActionButtons(updated);
     }
     // Un-saving from this page removes the planet, so close the panel with it.
-    if (fieldName === 'save' && !updated.saved) infoPanel.classList.remove('open');
+    if (fieldName === 'save' && !updated.saved) closeInfoPanel();
     refresh();
   } catch (err) {
     console.error('[saved]', err);

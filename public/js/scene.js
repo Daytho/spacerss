@@ -12,16 +12,23 @@ import * as THREE from '/vendor/three/build/three.module.js';
 
 const FIELD_ROTATION_SPEED = 0.0055; // radians/sec — a full sweep takes ~19 min
 const STARFIELD_ROTATION_SPEED = 0.0009; // slower, for parallax against the field
-const MIN_FOV = 38;
+// Floor low enough that the aspect-derived value below is never clamped in
+// practice. It used to be 38, which a short, wide window hits: the vertical
+// angle was then forced back up and the horizontal angle ballooned with it,
+// reaching 94 degrees at 1920x620 and smearing everything near the edges.
+// The floor now only bounds the manual zoom.
+const MIN_FOV = 22;
 const MAX_FOV = 92;
 const PITCH_LIMIT = Math.PI * 0.38;
 // The field is spread around the viewer, so how much of it is in frame depends
 // on the *horizontal* angle of view. Holding that constant and deriving the
 // vertical FOV from the aspect ratio keeps a phone from staring down a narrow
-// corridor and seeing one planet.
-const TARGET_HORIZONTAL_FOV = 82;
+// corridor and seeing one planet. Kept a little under 80: a sphere off to the
+// side of a very wide-angle view projects to a visibly stretched ellipse, which
+// reads as a rendering fault rather than as perspective.
+const TARGET_HORIZONTAL_FOV = 78;
 
-function verticalFovFor(aspect, zoom = 1) {
+export function verticalFovFor(aspect, zoom = 1) {
   const hFov = (TARGET_HORIZONTAL_FOV * Math.PI) / 180;
   const vFov = 2 * Math.atan(Math.tan(hFov / 2) / Math.max(aspect, 0.35));
   return Math.max(MIN_FOV, Math.min(MAX_FOV, (vFov * 180) / Math.PI * zoom));
@@ -159,13 +166,18 @@ export function initScene(container) {
   const field = new THREE.Group();
   scene.add(field);
 
-  scene.add(new THREE.AmbientLight(0x33465f, 2.2));
-  const key = new THREE.DirectionalLight(0xfff0d8, 3.1);
+  // The lighting has to do more than look nice: against a near-black background
+  // an unlit limb has nothing to fall off against, so the eye stops reading the
+  // sphere at the terminator and sees a lit crescent instead — planets look
+  // squashed or oval when they are in fact projecting as exact circles. Ambient
+  // and rim are set high enough to carry the dark side.
+  scene.add(new THREE.AmbientLight(0x3d5470, 3.1));
+  const key = new THREE.DirectionalLight(0xfff0d8, 2.9);
   key.position.copy(star.position);
   scene.add(key);
   // A cool rim from the opposite side keeps the unlit hemisphere from going
   // fully black, so planets stay legible as spheres rather than dark discs.
-  const rim = new THREE.DirectionalLight(0x5f83b8, 1.0);
+  const rim = new THREE.DirectionalLight(0x6f93c8, 1.9);
   rim.position.set(640, -260, -820);
   scene.add(rim);
 

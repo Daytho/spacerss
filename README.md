@@ -176,7 +176,7 @@ Go to <http://localhost:4000>.
 After `npm start`, the terminal will print something close to this:
 
 ```
-> spacerss@1.0.0 start
+> spacerss@1.0.4 start
 > node server/index.js
 
 SpaceRSS listening on http://127.0.0.1:4000
@@ -206,6 +206,35 @@ has content the moment it opens and works with no internet connection at all.
 On startup it also fetches current articles from all twelve feeds in the
 background and merges in anything new; that step needs internet and is skipped
 harmlessly without it.
+
+---
+
+## Using the dashboard
+
+Each planet is one story. **Colour is how dangerous it is** — red critical,
+through orange and yellow, down to dim grey for informational. **Size is how far
+it reaches**: people, organizations, machines, money or data affected. The two
+are deliberately independent, so a critical flaw in niche industrial gear is a
+small red planet, while a low-severity leak of 153 million records is a large
+dim one. The key to both is in the bottom-right corner.
+
+- **Click a planet** to open its article. The panel opens in the centre of the
+  screen; close it with the &times; button, the **Escape** key, or by clicking
+  anywhere outside it.
+- **Drag** anywhere in the scene to look around. The planets surround you, so
+  there are always more of them behind you than in front.
+- **Scroll** to widen or narrow the view.
+- **Pin** keeps a story in the field even after it ages out of the feed.
+  **Save** adds it to the Saved page, linked at the top left.
+- The **category buttons** dim everything that does not match, rather than
+  removing it, so the scene stays in the same arrangement while you filter.
+- Planets drift closer and further as they orbit; as one comes near it shows a
+  two-line summary — its category and severity, and the strongest concrete fact
+  the article gives.
+
+Wider screens are given more articles to fill the extra room: about 10 on a
+phone, rising to 38 on a large monitor. The dashboard re-checks the feeds every
+six hours, and the refresh button in the top right checks immediately.
 
 ---
 
@@ -307,8 +336,9 @@ Run from inside the project folder, same as everything else:
 npm test
 ```
 
-Runs the classification, ranking, impact-scoring, and scheduler-concurrency
-suites (87 cases). Verified passing on both Linux and Windows.
+Runs the classification, ranking, impact-scoring, field-placement and
+scheduler-concurrency suites (101 cases). Verified passing on Linux, on Windows,
+and inside the Codespaces container image.
 
 Note that the ranking suite asserts against the seeded database rather than
 against fixtures — several cases select known article groups by name to check
@@ -328,10 +358,14 @@ server/           Express server, feed ingestion, scoring
   feeds.js        the twelve RSS sources
   classify.js     categorisation and severity scoring
   impact.js       blast-radius scoring
-  ranking.js      orbital placement
+  ranking.js      which articles get a slot, and duplicate collapsing
   scheduler.js    ingest on boot, then every 6 hours
   db.js           SQLite schema and migrations
 public/           browser client (three.js scene)
+  js/scene.js     camera, lighting, starfield, input
+  js/planet.js    planet geometry, colour and size
+  js/slots.mjs    where each planet sits around the viewer
+  js/labels.js    proximity summaries drawn over the canvas
 data/             SQLite database (seeded)
 ```
 
